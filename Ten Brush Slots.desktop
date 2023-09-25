@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=tenbrushslots
+X-Python-2-Compatible=false
+X-Krita-Manual=Manual.html
+Name=Ten Brush Slots
+Comment=Assign brush presets to ten slots with configurable shortcuts

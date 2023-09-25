@@ -1,0 +1,228 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ActionCollection version="2" name="Scripts">
+  <Actions category="Scripts">
+	  <text>Ten Brush Slots</text>
+
+	  <Action name="pykrita_tenbrushslots">
+      <icon></icon>
+	  <text>Ten Brush Slots</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags>0</activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut></shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+    
+    <Action name="activate_slot_1">
+      <icon></icon>
+      <text>Activate Brush Slot 1</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+1</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_2">
+      <icon></icon>
+      <text>Activate Brush Slot 2</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+2</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_3">
+      <icon></icon>
+      <text>Activate Brush Slot 3</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+3</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_4">
+      <icon></icon>
+      <text>Activate Brush Slot 4</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+4</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_5">
+      <icon></icon>
+      <text>Activate Brush Slot 5</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+5</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_6">
+      <icon></icon>
+      <text>Activate Brush Slot 6</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+6</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_7">
+      <icon></icon>
+      <text>Activate Brush Slot 7</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+7</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_8">
+      <icon></icon>
+      <text>Activate Brush Slot 8</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+8</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_9">
+      <icon></icon>
+      <text>Activate Brush Slot 9</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+9</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="activate_slot_0">
+      <icon></icon>
+      <text>Activate Brush Slot 0</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+0</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="switch_to_next_kit">
+      <icon></icon>
+      <text>Switch To Next Kit</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+=</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="switch_to_previous_kit">
+      <icon></icon>
+      <text>Switch To Previous Kit</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>ctrl+alt+-</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="switch_to_next_group">
+      <icon></icon>
+      <text>Switch To Next Group</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>alt+=</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="switch_to_previous_group">
+      <icon></icon>
+      <text>Switch To Previous Group</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>alt+-</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="switch_to_next_position">
+      <icon></icon>
+      <text>Switch To Next Group</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>shift+=</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+    <Action name="switch_to_previous_position">
+      <icon></icon>
+      <text>Switch To Previous Group</text>
+      <whatsThis></whatsThis>
+      <toolTip></toolTip>
+      <iconText></iconText>
+      <activationFlags></activationFlags>
+      <activationConditions>0</activationConditions>
+      <shortcut>shift+-</shortcut>
+      <isCheckable>false</isCheckable>
+      <statusTip></statusTip>
+    </Action>
+
+  </Actions>
+</ActionCollection>
