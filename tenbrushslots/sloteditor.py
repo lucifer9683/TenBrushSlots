@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Ten Brush Slots is a Krita plugin for switching brush presets.
-# Copyright (C) 2023  Lucifer <github.com/lucifer9683>
+# Copyright (C) 2023  Lucifer <krita-artists.org/u/Lucifer>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -390,9 +390,9 @@ class SlotEditor(QDialog):
         if confirmDelete == QMessageBox.StandardButton.Yes:
             kit = self.kitList.itemText(self.currentIndex)
             self.ten.removeKit(kit)
-            self.currentIndex = -1
             
             if self.kitList.count() > 1:
+                self.currentIndex = -1
                 self.kitList.removeItem(self.kitList.currentIndex())
             else:
                 self.kitList.setItemText(0, "")

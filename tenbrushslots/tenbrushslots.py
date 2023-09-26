@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Ten Brush Slots is a Krita plugin for switching brush presets.
-# Copyright (C) 2023  Lucifer <github.com/lucifer9683>
+# Copyright (C) 2023  Lucifer <krita-artists.org/u/Lucifer>
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
