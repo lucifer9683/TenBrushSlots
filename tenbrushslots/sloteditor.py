@@ -47,8 +47,8 @@ class SlotView(QListView):
         self.setEditTriggers(QListView.EditTrigger.NoEditTriggers)
         self.setIconSize(ICON_SIZE)
         self.setGridSize(ICON_SIZE)
-        # View width should be fixed at 4px more than icon width for default spacing
-        self.setFixedWidth(ICON_WIDTH + 4)
+        # View width should be fixed at 2px more than icon width for perfect fit
+        self.setFixedWidth(ICON_WIDTH + 2)
         # Icons should not fit vertically if items exceed initial viewport size
         self.setMinimumHeight(int(ICON_HEIGHT * 4.5))
 
