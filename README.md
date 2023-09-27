@@ -1,5 +1,5 @@
 # Ten Brush Slots
-A [Krita](https://krita.org) extension that allows for assignment of multiple brush presets to each of the ten slots.
+Ten Brush Slots is a Python plugin made for [Krita](https://krita.org) (free professional and open-source painting program).
 
 This plugin is designed after the Ten Brushes extension, expanding functionality for efficient switching of brush families.
 
