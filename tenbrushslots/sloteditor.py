@@ -184,13 +184,14 @@ class SlotElements:
 
 class SlotEditor(QDialog):
     
-    def __init__(self, title: str, extension, parent=None):
+    def __init__(self, title: str, window: int, extension, parent=None):
         super().__init__(parent)
 
         self.ten = extension
         self.chosenPreset = None
         self.mainLayout = QVBoxLayout(self)
         self.setWindowTitle(title)
+        self.windex = window
         self.loadKits()
         self.mainLayout.addSpacing(4)
         self.loadSlots()
@@ -204,7 +205,7 @@ class SlotEditor(QDialog):
         self.kitList.setEditable(True)
         self.kitList.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
         self.kitList.setMinimumWidth(240)
-        self.kitList.setCurrentIndex(self.kitList.findText(self.ten.activeKit))
+        self.kitList.setCurrentIndex(self.kitList.findText(self.ten.activeKit[self.windex]))
         self.currentText = self.kitList.currentText()
         self.prevText = self.currentText
         self.kitList.editTextChanged.connect(self.setPrevText)
@@ -251,7 +252,7 @@ class SlotEditor(QDialog):
         self.slot = SlotElements()
         slotLayout = QHBoxLayout()
         allPresets = Application.resources('preset')
-        kit = self.ten.kits[self.ten.activeKit]
+        kit = self.ten.kits[self.ten.activeKit[self.windex]]
 
         for index, slot in enumerate(kit):
             buttonLayout = QVBoxLayout()
@@ -591,8 +592,8 @@ class SlotEditor(QDialog):
         
         self.saveOptions()
 
-        if self.currentText != self.ten.activeKit or self.currentText in self.ten.kitsEdited:
-            self.ten.setActiveKit(self.currentText)
+        if self.currentText != self.ten.activeKit[self.windex] or self.currentText in self.ten.kitsEdited:
+            self.ten.setActiveKit(self.currentText, self.windex)
 
         event.accept()
 
