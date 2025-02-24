@@ -21,7 +21,7 @@ from PyQt5.QtCore import Qt, QSize, QItemSelectionModel
 from PyQt5.QtGui import QPixmap, QIcon, QStandardItemModel, QStandardItem
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QListView, 
                              QStyleOptionViewItem, QPushButton, QMessageBox, QCheckBox, 
-                             QGroupBox, QGridLayout, QComboBox)
+                             QGroupBox, QGridLayout, QComboBox, QListWidget, QRadioButton)
 from krita import PresetChooser
 
 ICON_WIDTH = 64
@@ -77,12 +77,163 @@ class ChoiceDialog(QDialog):
         self.setWindowTitle(i18n("Preset Chooser"))
         self.mainLayout = QVBoxLayout(self)
         self.presetChooser = PresetChooser()
-        self.presetChooser.presetClicked.connect(self.accept)
+        self.presetChooser.presetClicked.connect(self.checkPreset)
         self.mainLayout.addWidget(self.presetChooser)
+    
+    def checkPreset(self):
+        preset = self.presetChooser.currentPreset()
+        if "," in preset.name() or ";" in preset.name():
+            QMessageBox().warning(self, i18n("Preset Chooser"), 
+            i18n("Unable to read commas( , ) and semicolons( ; ).\n\nPlease rename this preset before adding."))
+        else:
+            self.accept(preset)
 
-    def accept(self):
-        self.editor.chosenPreset = self.presetChooser.currentPreset()
+    def accept(self, preset):
+        self.editor.chosenPreset = preset
         super().accept()
+
+
+class SyncConfig(QDialog):
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+        self.editor = parent
+        self.setWindowTitle(i18n("Configure Syncing"))
+        self.mainLayout = QHBoxLayout(self)
+        self.mainLayout.setSizeConstraint(QHBoxLayout.SizeConstraint.SetFixedSize)
+        
+        self.kitList = QListWidget()
+        for index in range(self.editor.kitBox.count()):
+            self.kitList.addItem(self.editor.kitBox.itemText(index))
+        self.kitList.setCurrentRow(0)
+        self.kitList.currentItemChanged.connect(self.switchKit)
+        self.kitList.setFixedWidth(128)
+        self.mainLayout.addWidget(self.kitList)
+
+        self.grid = QGridLayout()
+        self.grid.setHorizontalSpacing(16)
+        self.mainLayout.addLayout(self.grid)
+
+        self.gridButton(i18n("&Settings / Slots"), 0, 0)
+        self.gridButton(i18n("&Erase Mode"), 1, 0)
+        self.gridButton(i18n("&Brush Size"), 2, 0)
+        self.gridButton(i18n("Painting &Opacity"), 3, 0)
+        self.gridButton(i18n("Painting &Flow"), 4, 0)
+        self.gridButton(i18n("Brush &Rotation"), 5, 0)
+        self.gridButton(i18n("Blending &Mode"), 6, 0)
+
+        for index in range(10):
+            action = self.editor.ten.actions[index]
+            self.gridButton(action.shortcut().toString(), 0, index + 1)
+            for i in range(self.grid.rowCount() - 1):
+                box = QCheckBox()
+                box.setTristate(True)
+                box.setToolTip(i18n("If Partially Checked, Only Presets in the Same Group Will Be Synced"))
+                box.stateChanged.connect(self.setEdited)
+                self.grid.addWidget(box, i + 1, index + 1)
+                self.grid.setAlignment(box, Qt.AlignmentFlag.AlignCenter)
+
+        self.edited = []
+        self.loadSettings(self.kitList.currentItem().text())
+
+    def gridButton(self, text: str, row: int, column: int):
+        button = QPushButton(text)
+        button.setAutoDefault(False)
+        name = f"Slot {text}" if "&" not in text else text.translate(str.maketrans("", "", "&"))
+        button.setToolTip(i18n(f"Check/Uncheck All in {name}"))
+        button.clicked.connect(self.checkAll)
+        if column > 0 and len(text) == 1:
+            button.setFixedWidth(36)
+        self.grid.addWidget(button, row, column)
+
+    def checkAll(self):
+        id = self.grid.indexOf(self.sender())
+        rows = self.grid.rowCount()
+        if id < rows:
+            if id == 0:
+                count = self.grid.count()
+                state = self.allState(count)
+                for i in range(rows + 1, count):
+                    box = self.grid.itemAt(i).widget()
+                    if type(box) is not QCheckBox:
+                        continue
+                    box.setCheckState(state)
+            else:
+                state = self.allState(10, id)
+                for i in range(10):
+                    box = self.grid.itemAtPosition(id, i + 1).widget()
+                    box.setCheckState(state)
+        else:
+            id = int(id / rows)
+            state = self.allState(rows - 1, id)
+            for i in range(rows - 1):
+                box = self.grid.itemAtPosition(i + 1, id).widget()
+                box.setCheckState(state)
+
+    def allState(self, count: int, id=0):
+        high = 0
+        low = 2
+        for i in range(count):
+            box = None
+            if count > 10:
+                box = self.grid.itemAt(i).widget()
+            elif count == 10:
+                box = self.grid.itemAtPosition(id, i + 1).widget()
+            else:
+                box = self.grid.itemAtPosition(i + 1, id).widget()
+            
+            if type(box) is not QCheckBox:
+                continue
+            
+            state = box.checkState()
+            if state > high:
+                high = state
+            if state < low:
+                low = state
+            if high == 2 and low < 2:
+                break
+        if high == low:
+            if high == 2:
+                high = 0
+            else:
+                high += 1
+        return high
+
+    def loadSettings(self, kit: str):
+        settings = self.editor.ten.sync.getSettings(kit)
+        for i, setting in enumerate(settings):
+            for j, state in enumerate(setting):
+                box = self.grid.itemAtPosition(i + 1, j + 1).widget()
+                box.setCheckState(state)
+        self.edited = []
+
+    def saveSettings(self, kit: str):
+        states = []
+        for id in self.edited:
+            box = self.grid.itemAt(id).widget()
+            states.append(box.checkState())
+        if len(self.edited) == len(states):
+            self.editor.ten.sync.changeSettings(kit, self.edited, states)
+            self.editor.ten.updateSettings = True
+
+    def setEdited(self, state):
+        id = self.grid.indexOf(self.sender())
+        same = self.editor.ten.sync.isStateSame(self.kitList.currentItem().text(), id, state)
+        if same and id in self.edited:
+            self.edited.remove(id)
+        elif not same and id not in self.edited:
+            self.edited.append(id)
+    
+    def switchKit(self, current, previous):
+        if self.edited:
+            self.saveSettings(previous.text())
+        self.loadSettings(current.text())
+
+    def closeEvent(self, event):
+        if self.edited:
+            self.saveSettings(self.kitList.currentItem().text())
+        event.accept()
 
 
 class PresetItem(QStandardItem):
@@ -200,18 +351,18 @@ class SlotEditor(QDialog):
         self.setFocus()
 
     def loadKits(self):
-        self.kitList = QComboBox()
-        self.kitList.addItems(self.ten.kits.keys())
-        self.kitList.setEditable(True)
-        self.kitList.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
-        self.kitList.setMinimumWidth(240)
-        self.kitList.setCurrentIndex(self.kitList.findText(self.ten.activeKit[self.windex]))
-        self.currentText = self.kitList.currentText()
+        self.kitBox = QComboBox()
+        self.kitBox.addItems(self.ten.kits.keys())
+        self.kitBox.setEditable(True)
+        self.kitBox.setInsertPolicy(QComboBox.InsertPolicy.NoInsert)
+        self.kitBox.setMinimumWidth(240)
+        self.kitBox.setCurrentIndex(self.kitBox.findText(self.ten.activeKit[self.windex]))
+        self.currentText = self.kitBox.currentText()
         self.prevText = self.currentText
-        self.kitList.editTextChanged.connect(self.setPrevText)
-        self.currentIndex = self.kitList.currentIndex()
+        self.kitBox.editTextChanged.connect(self.setPrevText)
+        self.currentIndex = self.kitBox.currentIndex()
         self.prevIndex = self.currentIndex
-        self.kitList.currentIndexChanged.connect(self.selectKit)
+        self.kitBox.currentIndexChanged.connect(self.selectKit)
 
         newKit = QPushButton()
         newKit.setAutoDefault(False)
@@ -240,7 +391,7 @@ class SlotEditor(QDialog):
         kitsLayout = QHBoxLayout()
         kitsLayout.addStretch()
         kitsLayout.addWidget(QLabel(i18n("Select Kit:")))
-        kitsLayout.addWidget(self.kitList)
+        kitsLayout.addWidget(self.kitBox)
         kitsLayout.addWidget(newKit)
         kitsLayout.addWidget(moveUp)
         kitsLayout.addWidget(moveDown)
@@ -284,60 +435,66 @@ class SlotEditor(QDialog):
                 model.appendRow(divider)
 
     def loadOptions(self):
-        self.activatePrevBox = QGroupBox(i18n("S&witch to Previous Brush on 2nd Press"))
-        self.activatePrevBox.setCheckable(True)
+        self.activatePrevBox = QCheckBox(i18n("Switch to Previous &Brush on 2nd Press"))
         self.activatePrevBox.setChecked(self.ten.activatePrev)
-        self.activatePrevBox.setToolTip(i18n("Only Switches if Slot Does Not Have Groups"))
-        self.enforcePrevBox = QCheckBox(i18n("&Enforce Switching to Previous Brush"))
-        self.enforcePrevBox.setToolTip(i18n("Ignores Switch to Next Group on 2nd Press"))
-        self.enforcePrevBox.setChecked(self.ten.enforcePrev)
 
-        prevBoxLayout = QVBoxLayout()
-        prevBoxLayout.addWidget(self.enforcePrevBox)
-        self.activatePrevBox.setLayout(prevBoxLayout)
-        panelLayout = QVBoxLayout()
-        panelLayout.addWidget(self.activatePrevBox)
-        
+        self.activateNextBox = QGroupBox(i18n("Switch to &Next Group/Position on 2nd Press"))
+        self.activateNextBox.setToolTip(
+            i18n("Overrides Switch to Previous Brush if Slot Contains Multiple Groups/Presets"))
+        self.activateNextBox.setCheckable(True)
+        self.activateNextBox.setChecked(self.ten.activateNext)
+
+        self.nextGroupButton = QRadioButton(i18n("&Group"))
+        nextPositionButton = QRadioButton(i18n("&Position"))
+        if self.ten.nextGroup:
+            self.nextGroupButton.setChecked(True)
+        else:
+            nextPositionButton.setChecked(True)
+
+        nextBoxLayout = QHBoxLayout()
+        nextBoxLayout.addWidget(self.nextGroupButton)
+        nextBoxLayout.addWidget(nextPositionButton)
+        self.activateNextBox.setLayout(nextBoxLayout)
+
         self.autoBrushBox = QCheckBox(i18n("&Auto-Select Freehand Brush Tool"))
-        self.autoBrushBox.setToolTip(i18n("Also Prevents 2nd Press Actions if Tool Not Selected"))
+        self.autoBrushBox.setToolTip(i18n("Also Prevents 2nd Press Switching if Tool Not Selected"))
         self.autoBrushBox.setChecked(self.ten.autoBrush)
-        panelLayout.addSpacing(4)
-        panelLayout.addWidget(self.autoBrushBox)
         
         self.syncBox = QGroupBox(i18n("&Sync Settings When Switching Group/Position"))
         self.syncBox.setCheckable(True)
         self.syncBox.setChecked(self.ten.sync.active)
-        self.sizeBox = QCheckBox(i18n("Brush Si&ze"))
-        self.sizeBox.setChecked(self.ten.sync.size)
-        self.opacityBox = QCheckBox(i18n("Painting Opa&city"))
-        self.opacityBox.setChecked(self.ten.sync.opacity)
-        self.flowBox = QCheckBox(i18n("Painting &Flow"))
-        self.flowBox.setChecked(self.ten.sync.flow)
-        self.eraseBox = QCheckBox(i18n("E&rase Mode"))
-        self.eraseBox.setChecked(self.ten.sync.erase)
 
-        syncBoxLayout = QGridLayout()
-        syncBoxLayout.addWidget(self.sizeBox, 0 ,0)
-        syncBoxLayout.addWidget(self.opacityBox, 0 ,1)
-        syncBoxLayout.addWidget(self.flowBox, 1 ,1)
-        syncBoxLayout.addWidget(self.eraseBox, 1 ,0)
+        configButton = QPushButton(i18n("&Configure Syncing"))
+        configButton.setAutoDefault(False)
+        configButton.clicked.connect(self.openConfig)
+        
+        syncBoxLayout = QVBoxLayout()
+        syncBoxLayout.addWidget(configButton)
         self.syncBox.setLayout(syncBoxLayout)
 
-        optionsLayout = QHBoxLayout()
-        optionsLayout.addLayout(panelLayout)
-        optionsLayout.addWidget(self.syncBox)
+        optionsLayout = QGridLayout()
+        optionsLayout.addWidget(self.activatePrevBox, 0, 0)
+        optionsLayout.addWidget(self.activateNextBox, 1, 0)
+        optionsLayout.addWidget(self.autoBrushBox, 0, 1)
+        optionsLayout.addWidget(self.syncBox, 1, 1)
+        optionsLayout.setVerticalSpacing(16)
         self.mainLayout.addLayout(optionsLayout)
+
+    def openConfig(self):
+        self.saveKit(self.currentIndex, self.currentText)
+        config = SyncConfig(self)
+        config.exec()
 
     def setPrevText(self):
         self.prevText = self.currentText
-        self.currentText = self.kitList.currentText()
+        self.currentText = self.kitBox.currentText()
     
     def selectKit(self):
         if self.currentIndex == -2:
             return
         
         self.prevIndex = self.currentIndex
-        self.currentIndex = self.kitList.currentIndex()
+        self.currentIndex = self.kitBox.currentIndex()
         if self.prevIndex != -1:
             self.saveKit(self.prevIndex, self.prevText)
         
@@ -350,7 +507,7 @@ class SlotEditor(QDialog):
 
     def getUniqueName(self, name: str):
         copy = i18n("Copy")
-        while self.kitList.findText(name) != -1:
+        while self.kitBox.findText(name) != -1:
             name += f"({copy})"
         return name
     
@@ -359,28 +516,28 @@ class SlotEditor(QDialog):
         self.currentIndex = -1
 
         name = self.getUniqueName(i18n("New"))
-        self.kitList.addItem(name)
+        self.kitBox.addItem(name)
         
-        index = self.kitList.findText(name)
-        self.kitList.setCurrentIndex(index)
+        index = self.kitBox.findText(name)
+        self.kitBox.setCurrentIndex(index)
 
     def moveKit(self):
-        length = self.kitList.count()
+        length = self.kitBox.count()
         if length > 1:
             self.saveKit(self.currentIndex, self.currentText)
-            kit = self.kitList.itemText(self.currentIndex)
+            kit = self.kitBox.itemText(self.currentIndex)
 
-            if self.kitList.sender().toolTip() == i18n("Move Down Selected Kit") and self.currentIndex < length - 1:
+            if self.kitBox.sender().toolTip() == i18n("Move Down Selected Kit") and self.currentIndex < length - 1:
                 destination = self.currentIndex + 1
-            elif self.kitList.sender().toolTip() == i18n("Move Up Selected Kit") and self.currentIndex > 0:
+            elif self.kitBox.sender().toolTip() == i18n("Move Up Selected Kit") and self.currentIndex > 0:
                 destination = self.currentIndex - 1
             else:
                 return
             
             self.currentIndex = -2
-            self.kitList.removeItem(self.kitList.currentIndex())
-            self.kitList.insertItem(destination, kit)
-            self.kitList.setCurrentIndex(destination)
+            self.kitBox.removeItem(self.kitBox.currentIndex())
+            self.kitBox.insertItem(destination, kit)
+            self.kitBox.setCurrentIndex(destination)
             self.currentIndex = destination
 
     def deleteKit(self):
@@ -389,14 +546,16 @@ class SlotEditor(QDialog):
                                               QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         
         if confirmDelete == QMessageBox.StandardButton.Yes:
-            kit = self.kitList.itemText(self.currentIndex)
+            kit = self.kitBox.itemText(self.currentIndex)
             self.ten.removeKit(kit)
+            if self.ten.sync.isKitStored(kit):
+                self.ten.sync.removeKit(kit)
             
-            if self.kitList.count() > 1:
+            if self.kitBox.count() > 1:
                 self.currentIndex = -1
-                self.kitList.removeItem(self.kitList.currentIndex())
+                self.kitBox.removeItem(self.kitBox.currentIndex())
             else:
-                self.kitList.setItemText(0, "")
+                self.kitBox.setItemText(0, "")
                 self.slot.clear()
 
     def insertPreset(self):
@@ -409,8 +568,7 @@ class SlotEditor(QDialog):
                 prevIndex = self.slot.presets[preset.name()]
                 shortcut = self.slot.shortcuts[prevIndex]
                 movePreset = QMessageBox().question(self, i18n("Preset Chooser"), 
-                                                    i18n(f"Preset already in slot {shortcut}.\n\nMove it instead?"), 
-                                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+                                                    i18n(f"Preset already in slot {shortcut}.\n\nMove it instead?"))
                 
                 if movePreset == QMessageBox.StandardButton.No:
                     return
@@ -534,26 +692,44 @@ class SlotEditor(QDialog):
             return slots
     
     def saveKit(self, index: int, text: str):
-        kit = self.kitList.itemText(index)
+        kit = self.kitBox.itemText(index)
+        text = text.replace(",", " ")
+        stored = self.ten.sync.isKitStored(kit)
 
         if kit != text:
             name = self.getUniqueName(text)
-            self.kitList.setItemText(index, name)
+            self.kitBox.setItemText(index, name)
             if kit in self.ten.kits:
                 self.ten.updateName(kit, name)
+            if stored:
+                self.ten.sync.renameKit(kit, name)
             kit = name
-
+        
         slots = self.editedSlots(kit)
         if slots:
-            self.ten.updateKit(kit ,slots)
+            self.ten.updateKit(kit, slots)
+            if not stored:
+                self.ten.sync.newKit(kit)
 
-    def saveOptions(self):
+    def closeEvent(self, event):
+        self.saveKit(self.currentIndex, self.currentText)
+        
+        kitOrder = []
+        for index in range(self.kitBox.count()):
+            kitOrder.append(self.kitBox.itemText(index))
+        if kitOrder != list(self.ten.kits.keys()):
+            self.ten.reorderKits(kitOrder)
+        
         if self.ten.activatePrev != self.activatePrevBox.isChecked():
             self.ten.activatePrev = self.activatePrevBox.isChecked()
             self.ten.updateSettings = True
-        
-        if self.ten.enforcePrev != self.enforcePrevBox.isChecked():
-            self.ten.enforcePrev = self.enforcePrevBox.isChecked()
+
+        if self.ten.activateNext != self.activateNextBox.isChecked():
+            self.ten.activateNext = self.activateNextBox.isChecked()
+            self.ten.updateSettings = True
+
+        if self.ten.nextGroup != self.nextGroupButton.isChecked():
+            self.ten.nextGroup = self.nextGroupButton.isChecked()
             self.ten.updateSettings = True
         
         if self.ten.autoBrush != self.autoBrushBox.isChecked():
@@ -563,34 +739,6 @@ class SlotEditor(QDialog):
         if self.ten.sync.active != self.syncBox.isChecked():
             self.ten.sync.active = self.syncBox.isChecked()
             self.ten.updateSettings = True
-        
-        if self.ten.sync.size != self.sizeBox.isChecked():
-            self.ten.sync.size = self.sizeBox.isChecked()
-            self.ten.updateSettings = True
-        
-        if self.ten.sync.opacity != self.opacityBox.isChecked():
-            self.ten.sync.opacity = self.opacityBox.isChecked()
-            self.ten.updateSettings = True
-        
-        if self.ten.sync.flow != self.flowBox.isChecked():
-            self.ten.sync.flow = self.flowBox.isChecked()
-            self.ten.updateSettings = True
-        
-        if self.ten.sync.erase != self.eraseBox.isChecked():
-            self.ten.sync.erase = self.eraseBox.isChecked()
-            self.ten.updateSettings = True
-
-    def closeEvent(self, event):
-        self.saveKit(self.currentIndex, self.currentText)
-        self.currentText = self.kitList.itemText(self.currentIndex)
-        
-        kitOrder = []
-        for index in range(self.kitList.count()):
-            kitOrder.append(self.kitList.itemText(index))
-        if kitOrder != list(self.ten.kits.keys()):
-            self.ten.reorderKits(kitOrder)
-        
-        self.saveOptions()
 
         if self.currentText != self.ten.activeKit[self.windex] or self.currentText in self.ten.kitsEdited:
             self.ten.setActiveKit(self.currentText, self.windex)

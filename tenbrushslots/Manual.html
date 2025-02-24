@@ -13,10 +13,12 @@
     Changes in the editor are saved automatically.</p>
 <p>Go to <strong>Settings → Configure Krita → Keyboard Shortcuts</strong> under <strong>Ten Brush Slots</strong> to change the shortcuts. 
     Each slot has a configurable shortcut like in Ten Brushes. There are 3 additional shortcut pairs to help users switch brushes within the slots.</p>
-<p>When 2 or more kits are set up, <strong>Switch to Next/Previous Kit</strong> will cycle the kits, assigning the first brush of each slot in the kit to their respective shortcuts.</p>
-<p>Pressing the shortcut for <strong>Switch to Next/Previous Group</strong> will cycle the groups in the slot of the last activated shortcut and activate the brush in that group with its position maintained 
-    if possible. For example, if the current shortcut has a brush in the 2nd position of the 3rd group in a slot with 3 groups assigned, switching to the next group will activate a brush in the 2nd position 
-    of the 1st group. If maintaining position is not possible as no brush preset is in that position of the other group, the first brush of the other group is activated instead.</p>
-<p>Pressing the shortcut for <strong>Switch to Next/Previous Position</strong> will cycle the position in the group of the last activated shortcut and activate the brush in that position.</p>
+<p>When 2 or more kits are set up, <strong>Switch to Next/Previous Kit</strong> will cycle the kits, assigning the first brush preset of each slot in the following kit to their respective shortcuts. 
+    If the current or previous brush presets are in any of the slots from the following kit, they will be assigned to the slot instead.</p>
+<p>Pressing the shortcut for <strong>Switch to Next/Previous Group</strong> will cycle the groups in the slot with the current brush preset and activate the preset in the following group with its position 
+    maintained if possible. For example, if the current shortcut has a preset in the 2nd position of the 3rd group in a slot with 3 groups assigned, switching to the next group will activate a preset in the 
+    2nd position of the 1st group. If maintaining position is not possible as no brush preset is in that position of the other group, the first preset of the other group is activated instead.</p>
+<p>Pressing the shortcut for <strong>Switch to Next/Previous Position</strong> will cycle the position in the group with the current brush preset and activate the preset in the following position. 
+    No switching will occur when the current brush preset does not belong in any slot and if the auto-select brush option is active, it will still activate the brush tool.</p>
 </body>
 </html>

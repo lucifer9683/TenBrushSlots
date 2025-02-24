@@ -58,12 +58,112 @@ class ActionCycle:
 
 class SlotSync:
 
-    def __init__(self, active=False, size=True, opacity=True, flow=True, erase=True):
-        self.active = active
-        self.size = size
-        self.opacity = opacity
-        self.flow = flow
-        self.erase = erase
+    def __init__(self):
+        self.active = True
+        self.erase = {}
+        self.size = {}
+        self.opacity = {}
+        self.flow = {}
+        self.rotation = {}
+        self.blending = {}
+
+    def isStateSame(self, kit: str, id: int, state: int):
+        option = id % 7
+        slot = int(((id - option) / 7) - 1)
+        if 0 <= slot <= 9:
+            match option:
+                case 1:
+                    return self.erase[kit][slot] == state
+                case 2:
+                    return self.size[kit][slot] == state
+                case 3:
+                    return self.opacity[kit][slot] == state
+                case 4:
+                    return self.flow[kit][slot] == state
+                case 5:
+                    return self.rotation[kit][slot] == state
+                case 6:
+                    return self.blending[kit][slot] == state
+
+    def isKitStored(self, kit: str):
+        return all([kit in self.erase, kit in self.size, kit in self.opacity, 
+                    kit in self.flow, kit in self.rotation, kit in self.blending])
+    
+    def newKit(self, kit: str):
+        setting = []
+        for _ in range(10):
+            setting.append(2)
+        self.erase[kit] = setting.copy()
+        self.size[kit] = setting.copy()
+        self.opacity[kit] = setting.copy()
+        self.flow[kit] = setting.copy()
+        self.rotation[kit] = setting.copy()
+        self.blending[kit] = setting.copy()
+
+    def removeKit(self, kit: str):
+        return [self.erase.pop(kit), self.size.pop(kit), self.opacity.pop(kit), 
+                self.flow.pop(kit), self.rotation.pop(kit), self.blending.pop(kit)]
+
+    def renameKit(self, prevName: str, newName: str):
+        settings = self.removeKit(prevName)
+        self.erase[newName] = settings[0]
+        self.size[newName] = settings[1]
+        self.opacity[newName] = settings[2]
+        self.flow[newName] = settings[3]
+        self.rotation[newName] = settings[4]
+        self.blending[newName] = settings[5]
+
+    def changeSettings(self, kit: str, ids, states):
+        for index, id in enumerate(ids):
+            option = id % 7
+            slot = int(((id - option) / 7) - 1)
+            if 0 <= slot <= 9:
+                match option:
+                    case 1:
+                        self.erase[kit][slot] = states[index]
+                    case 2:
+                        self.size[kit][slot] = states[index]
+                    case 3:
+                        self.opacity[kit][slot] = states[index]
+                    case 4:
+                        self.flow[kit][slot] = states[index]
+                    case 5:
+                        self.rotation[kit][slot] = states[index]
+                    case 6:
+                        self.blending[kit][slot] = states[index]
+
+    def getSettings(self, kit: str):
+        return [self.erase[kit], self.size[kit], self.opacity[kit], 
+                self.flow[kit], self.rotation[kit], self.blending[kit]]
+
+    def getString(self, kit: str):
+        ids = []
+        states = []
+        for index, state in enumerate(self.erase[kit]):
+            if state != 2:
+                ids.append(str((index + 1) * 7 + 1))
+                states.append(str(state))
+        for index, state in enumerate(self.size[kit]):
+            if state != 2:
+                ids.append(str((index + 1) * 7 + 2))
+                states.append(str(state))
+        for index, state in enumerate(self.opacity[kit]):
+            if state != 2:
+                ids.append(str((index + 1) * 7 + 3))
+                states.append(str(state))
+        for index, state in enumerate(self.flow[kit]):
+            if state != 2:
+                ids.append(str((index + 1) * 7 + 4))
+                states.append(str(state))
+        for index, state in enumerate(self.rotation[kit]):
+            if state != 2:
+                ids.append(str((index + 1) * 7 + 5))
+                states.append(str(state))
+        for index, state in enumerate(self.blending[kit]):
+            if state != 2:
+                ids.append(str((index + 1) * 7 + 6))
+                states.append(str(state))
+        return ";".join([",".join(ids), ",".join(states)]) 
 
 
 class TenBrushSlots(Extension):
@@ -78,16 +178,17 @@ class TenBrushSlots(Extension):
         self.currentSlot = []
         # Store parameters to shortcuts
         self.actions = []
-        # Parameters to activate previous slot/preset
+        # Parameters to activate previous preset and next group/position
         self.activatePrev = True
-        self.enforcePrev = False
+        self.activateNext = True
+        self.nextGroup = True
         self.prevPreset = []
         self.prevSlot = []
         # Parameters for auto brush tool
         self.autoBrush = True
         self.brushTool = None
         # Sync preset settings when cycling in slot
-        self.sync = SlotSync(True)
+        self.sync = SlotSync()
         # Checks if editor updated slots/settings
         self.kitsEdited = []
         self.updateSettings = False
@@ -99,13 +200,27 @@ class TenBrushSlots(Extension):
     def setup(self):
         self.readSettings()
         notify = Application.notifier()
-        notify.setActive(True)
         notify.windowCreated.connect(self.newWindow)
+        notify.imageClosed.connect(self.resetCurrent)
+        notify.setActive(True)
 
     def newWindow(self):
         windows = Application.windows()
         windows[-1].windowClosed.connect(self.resetPointers)
         self.loadTool()
+        self.resetCurrent()
+
+    def resetCurrent(self):
+        if Application.activeWindow().views():
+            return
+        
+        preset = Application.readSetting("", "LastPreset", "")
+        allPresets = Application.resources('preset')
+        if preset in allPresets:
+            window = list(Application.windows()).index(Application.activeWindow())
+            slot = self.findPreset(preset, window)
+            if slot is not None:
+                self.currentSlot[window] = slot
 
     def resetPointers(self):
         if Application.windows():
@@ -166,11 +281,52 @@ class TenBrushSlots(Extension):
     
     def setActiveKit(self, kit: str, window: int):
         self.activeKit[window] = kit
+
+        preset = Application.readSetting("", "LastPreset", "")
+        view = Application.activeWindow().activeView()
+        if view.visible():
+            preset = view.currentBrushPreset().name()
+
+        currentSlot = None
+        allPresets = Application.resources('preset')
+        if preset in allPresets:
+            currentSlot = self.findPreset(preset, window)
+            if currentSlot is not None:
+                self.currentSlot[window] = currentSlot
+
+        prevSlot = None
+        if self.prevPreset[window]:
+            preset = self.prevPreset[window].name()
+            if preset in allPresets:
+                prevSlot = self.findPreset(preset, window, currentSlot)
+                if prevSlot is not None:
+                    self.prevSlot[window] = prevSlot
+
         start = window * ACTIONS
         for index, action in enumerate(self.actions[start:start+len(SLOTS)]):
-            action.preset = None
+            if index == currentSlot or index == prevSlot:
+                continue
+            
             if self.kits[kit][index]:
                 action.preset = ActionPreset(0, self.kits[kit][index][0][0])
+            else:
+                action.preset = None
+
+    def findPreset(self, presetName: str, window: int, currentSlot=None):
+        presetSlot = None
+        presetGroup = 0
+        for index, slot in enumerate(self.kits[self.activeKit[window]]):
+            if presetSlot is not None:
+                    break
+
+            for idx, group in enumerate(slot):
+                if presetName in group:
+                    presetSlot = index
+                    presetGroup = idx
+                    break
+        if presetSlot is not None and presetSlot != currentSlot:
+            self.actions[presetSlot + window*ACTIONS].preset = ActionPreset(presetGroup, presetName)
+        return presetSlot
     
     def readSettings(self):
         allPresets = Application.resources('preset')
@@ -187,16 +343,21 @@ class TenBrushSlots(Extension):
                 slot = [group for group in slot if group]
                 self.kits[kit].append(slot)
 
+            self.sync.newKit(kit)
+            sync = Application.readSetting(MENU_ENTRY, f"{index}sync", "").split(";")
+            if len(sync) == 2:
+                ids = [int(id) for id in sync[0].split(",") if id.isdecimal()]
+                states = [int(state) for state in sync[1].split(",") if state == "0" or state == "1"]
+                if len(ids) == len(states):
+                    self.sync.changeSettings(kit, ids, states)
+
         options = Application.readSetting(MENU_ENTRY, "options", "").split(",")
-        if len(options) == 8:
+        if len(options) == 5:
             self.activatePrev = options[0] == "True"
-            self.enforcePrev = options[1] == "True"
-            self.autoBrush = options[2] == "True"
-            self.sync.active = options[3] == "True"
-            self.sync.size = options[4] == "True"
-            self.sync.opacity = options[5] == "True"
-            self.sync.flow = options[6] == "True"
-            self.sync.erase = options[7] == "True"
+            self.activateNext = options[1] == "True"
+            self.nextGroup = options[2] == "True"
+            self.autoBrush = options[3] == "True"
+            self.sync.active = options[4] == "True"
 
     def writeSettings(self):
         kits = list(self.kits.keys())
@@ -207,18 +368,17 @@ class TenBrushSlots(Extension):
                 slot = [",".join(group) for group in self.kits[kit][idx]]
                 Application.writeSetting(MENU_ENTRY, f"{index}slot{number}", ";".join(slot))
 
+            Application.writeSetting(MENU_ENTRY, f"{index}sync", self.sync.getString(kit))
+
         options = []
         options.append(str(self.activatePrev))
-        options.append(str(self.enforcePrev))
+        options.append(str(self.activateNext))
+        options.append(str(self.nextGroup))
         options.append(str(self.autoBrush))
         options.append(str(self.sync.active))
-        options.append(str(self.sync.size))
-        options.append(str(self.sync.opacity))
-        options.append(str(self.sync.flow))
-        options.append(str(self.sync.erase))
         Application.writeSetting(MENU_ENTRY, "options", ",".join(options))
     
-    def loadActions(self, window) -> None:
+    def loadActions(self, window):
         kit = list(self.kits.keys())[0]
         for index, number in enumerate(SLOTS):
             action = window.createAction(f"activate_slot_{number}", i18n(f"Activate Brush Slot {number}"), "")
@@ -268,13 +428,13 @@ class TenBrushSlots(Extension):
             return
         
         window = int(self.actions.index(self.sender()) / ACTIONS)
-        preset = self.sender().preset
+        preset: ActionPreset = self.sender().preset
         if preset is None:
             self.showMessage(view, window, 'empty')
             return
             
         allPresets = Application.resources('preset')
-        if  preset.name not in allPresets:
+        if preset.name not in allPresets:
             self.showMessage(view, window, 'missing')
             return
 
@@ -282,18 +442,44 @@ class TenBrushSlots(Extension):
         slot = self.actions.index(self.sender()) % ACTIONS
         currentPreset = view.currentBrushPreset()
         if preset.name == currentPreset.name() and (not self.autoBrush or self.brushTool.isChecked()):
-            if len(self.kits[self.activeKit[window]][slot]) > 1 and not(self.activatePrev and self.enforcePrev):
+            kit = self.activeKit[window]
+            if self.activateNext and self.nextGroup and len(self.kits[kit][slot]) > 1:
                 self.currentSlot[window] = slot
                 if not self.cycleGroup(view, allPresets, preset, ActionCycle.Value, window):
                     self.showMessage(view, window, 'missing')
                     return
+            elif self.activateNext and (not self.nextGroup and 
+                                        len(self.kits[kit][slot][preset.group]) > 1):
+                self.currentSlot[window] = slot
+                if not self.cyclePosition(view, allPresets, preset, ActionCycle.Value, window):
+                    self.showMessage(view, window, 'missing')
+                    return
             elif self.activatePrev and self.prevPreset[window] is not None:
+                synced = False
+                prevName = self.prevPreset[window].name()
                 if self.currentSlot[window] != self.prevSlot[window]:
-                    self.setPrevSlot(slot, window)
-                view.activateResource(self.prevPreset[window])
+                    if slot == self.currentSlot[window]:
+                        for group in self.kits[kit][self.prevSlot[window]]:
+                            if prevName in group:
+                                self.currentSlot[window] = self.prevSlot[window]
+                                self.prevSlot[window] = slot
+                                break
+                    else:
+                        for group in self.kits[kit][self.currentSlot[window]]:
+                            if prevName in group:
+                                self.prevSlot[window] = slot
+                                break
+                else:
+                    for index, group in enumerate(self.kits[kit][slot]):
+                        if prevName in group:
+                            self.actions[slot + window*ACTIONS].preset = ActionPreset(index, prevName)
+                            synced = self.activateAndSync(view, allPresets, prevName, window, index == preset.group)
+                            break
+                if not synced:
+                    view.activateResource(self.prevPreset[window])
                 self.prevPreset[window] = currentPreset
         else:
-            if preset.name != currentPreset.name() or not self.autoBrush:
+            if preset.name != currentPreset.name():
                 self.prevPreset[window] = currentPreset
                 self.prevSlot[window] = self.currentSlot[window]
             self.currentSlot[window] = slot
@@ -302,19 +488,6 @@ class TenBrushSlots(Extension):
         if self.autoBrush:
             Application.action('KritaShape/KisToolBrush').trigger()
         self.showMessage(view, window, 'selected')
-
-    def setPrevSlot(self, slot: int, window:int):
-        if slot == self.currentSlot[window]:
-            for group in self.kits[self.activeKit[window]][self.prevSlot[window]]:
-                if self.prevPreset[window].name() in group:
-                    self.currentSlot[window] = self.prevSlot[window]
-                    self.prevSlot[window] = slot
-                    return self.prevSlot[window]
-        else:
-            for group in self.kits[self.activeKit[window]][self.currentSlot[window]]:
-                if self.prevPreset[window].name() in group:
-                    self.prevSlot[window] = slot
-                    return self.prevSlot[window]
     
     def showMessage(self, view, window: int, message: str):
         kit = self.activeKit[window]
@@ -346,22 +519,34 @@ class TenBrushSlots(Extension):
                 self.cycleKit(cycle.vector, window)
                 self.showMessage(view, window, 'kit')
             return
-        
-        preset = self.actions[self.currentSlot[window] + window*ACTIONS].preset
+
+        currentSlot = self.currentSlot[window]
+        preset: ActionPreset = self.actions[currentSlot + window*ACTIONS].preset
+        changed = False
         if preset is None:
-            self.showMessage(view, window, 'empty')
-            return
-        
-        allPresets = Application.resources('preset')
-        slot = self.kits[self.activeKit[window]][self.currentSlot[window]]
-        if cycle.order == 'group' and len(slot) > 1:
-            if not self.cycleGroup(view, allPresets, preset, cycle.vector, window):
-                self.showMessage(view, window, 'missing')
-                return
-        elif cycle.order == 'position' and len(slot[preset.group]) > 1:
-            if not self.cyclePosition(view, allPresets, preset, cycle.vector, window):
-                self.showMessage(view, window, 'missing')
-                return
+            currentSlot = self.findPreset(currentPreset.name(), window)
+            changed = True
+        else:
+            currentPreset = view.currentBrushPreset()
+            if preset.name != currentPreset.name():
+                currentSlot = self.findPreset(currentPreset.name(), window)
+                changed = True
+
+        if currentSlot is not None:
+            if changed:
+                preset = self.actions[currentSlot + window*ACTIONS].preset
+                self.currentSlot[window] = currentSlot
+            
+            allPresets = Application.resources('preset')
+            slot = self.kits[self.activeKit[window]][currentSlot]
+            if cycle.order == 'group' and len(slot) > 1:
+                if not self.cycleGroup(view, allPresets, preset, cycle.vector, window):
+                    self.showMessage(view, window, 'missing')
+                    return
+            elif cycle.order == 'position' and len(slot[preset.group]) > 1:
+                if not self.cyclePosition(view, allPresets, preset, cycle.vector, window):
+                    self.showMessage(view, window, 'missing')
+                    return
 
         if self.autoBrush:
             Application.action('KritaShape/KisToolBrush').trigger()
@@ -383,7 +568,8 @@ class TenBrushSlots(Extension):
         self.setActiveKit(kits[destination], window)
     
     def cycleGroup(self, view, allPresets: dict, preset: ActionPreset, vector: int, window: int):
-        slot = self.kits[self.activeKit[window]][self.currentSlot[window]]
+        currentSlot = self.currentSlot[window]
+        slot = self.kits[self.activeKit[window]][currentSlot]
         if not slot or preset.group >= len(slot):
             return
         
@@ -398,13 +584,14 @@ class TenBrushSlots(Extension):
 
         presetName = slot[destination][position]
         if presetName in allPresets:
-            self.actions[self.currentSlot[window] + window*ACTIONS].preset = ActionPreset(destination, presetName)
+            self.actions[currentSlot + window*ACTIONS].preset = ActionPreset(destination, presetName)
             self.prevPreset[window] = view.currentBrushPreset()
-            self.prevSlot[window] = self.currentSlot[window]
+            self.prevSlot[window] = currentSlot
             return self.activateAndSync(view, allPresets, presetName, window)
 
     def cyclePosition(self, view, allPresets: dict, preset: ActionPreset, vector: int, window: int):
-        slot = self.kits[self.activeKit[window]][self.currentSlot[window]]
+        currentSlot = self.currentSlot[window]
+        slot = self.kits[self.activeKit[window]][currentSlot]
         if not slot or preset.group >= len(slot):
             return
         
@@ -417,28 +604,38 @@ class TenBrushSlots(Extension):
         destination = self.getDestination(position, len(group), vector)
         presetName = group[destination]
         if presetName in allPresets:
-            self.actions[self.currentSlot[window] + window*ACTIONS].preset = ActionPreset(preset.group, presetName)
+            self.actions[currentSlot + window*ACTIONS].preset = ActionPreset(preset.group, presetName)
             self.prevPreset[window] = view.currentBrushPreset()
-            self.prevSlot[window] = self.currentSlot[window]
-            return self.activateAndSync(view, allPresets, presetName, window)
+            self.prevSlot[window] = currentSlot
+            return self.activateAndSync(view, allPresets, presetName, window, True)
         
-    def activateAndSync(self, view, allPresets: dict, presetName: str, window: int):
+    def activateAndSync(self, view, allPresets: dict, presetName: str, window: int, sameGroup=False):
+        erase = Application.action('erase_action')
+        state = erase.isChecked()
         size = view.brushSize()
         opacity = view.paintingOpacity()
         flow = view.paintingFlow()
-        erase = Application.action('erase_action')
-        state = erase.isChecked()
+        rotation = view.brushRotation()
+        blending = view.currentBlendingMode()
 
         view.activateResource(allPresets[presetName])
         if self.sync.active:
-            if self.sync.size:
-                view.setBrushSize(size)
-            if self.sync.opacity:
-                view.setPaintingOpacity(opacity)
-            if self.sync.flow:
-                view.setPaintingFlow(flow)
-            if self.sync.erase:
+            kit = self.activeKit[window]
+            slot = self.currentSlot[window]
+
+            if self.sync.erase[kit][slot] == 2 or (self.sync.erase[kit][slot] == 1 and sameGroup):
                 if state != erase.isChecked():
                     erase.trigger()
-        return presetName
+            if self.sync.size[kit][slot] == 2 or (self.sync.size[kit][slot] == 1 and sameGroup):
+                view.setBrushSize(size)
+            if self.sync.opacity[kit][slot] == 2 or (self.sync.opacity[kit][slot] == 1 and sameGroup):
+                view.setPaintingOpacity(opacity)
+            if self.sync.flow[kit][slot] == 2 or (self.sync.flow[kit][slot] == 1 and sameGroup):
+                view.setPaintingFlow(flow)
+            if self.sync.rotation[kit][slot] == 2 or (self.sync.rotation[kit][slot] == 1 and sameGroup):
+                view.setBrushRotation(rotation)
+            if self.sync.blending[kit][slot] == 2 or (self.sync.blending[kit][slot] == 1 and sameGroup):
+                view.setCurrentBlendingMode(blending)
+
+        return True
 
