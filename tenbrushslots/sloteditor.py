@@ -129,7 +129,7 @@ class SyncConfig(QDialog):
             for i in range(self.grid.rowCount() - 1):
                 box = QCheckBox()
                 box.setTristate(True)
-                box.setToolTip(i18n("If Partially Checked, Only Presets in the Same Group will be Synced"))
+                box.setToolTip(i18n("If Partially Checked, Only Presets in the Same Group Will Be Synced"))
                 box.stateChanged.connect(self.setEdited)
                 self.grid.addWidget(box, i + 1, index + 1)
                 self.grid.setAlignment(box, Qt.AlignmentFlag.AlignCenter)
@@ -440,7 +440,7 @@ class SlotEditor(QDialog):
 
         self.activateNextBox = QGroupBox(i18n("Switch to &Next Group/Position on 2nd Press"))
         self.activateNextBox.setToolTip(
-            i18n("Overrides Switch to Previous Brush if Slot contains multiple Groups/Presets"))
+            i18n("Overrides Switch to Previous Brush if Slot Contains Multiple Groups/Presets"))
         self.activateNextBox.setCheckable(True)
         self.activateNextBox.setChecked(self.ten.activateNext)
 
@@ -457,7 +457,7 @@ class SlotEditor(QDialog):
         self.activateNextBox.setLayout(nextBoxLayout)
 
         self.autoBrushBox = QCheckBox(i18n("&Auto-Select Freehand Brush Tool"))
-        self.autoBrushBox.setToolTip(i18n("Also prevents 2nd Press Switching if Tool not selected"))
+        self.autoBrushBox.setToolTip(i18n("Also Prevents 2nd Press Switching if Tool Not Selected"))
         self.autoBrushBox.setChecked(self.ten.autoBrush)
         
         self.syncBox = QGroupBox(i18n("&Sync Settings When Switching Group/Position"))

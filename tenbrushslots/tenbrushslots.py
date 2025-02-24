@@ -345,14 +345,14 @@ class TenBrushSlots(Extension):
 
             self.sync.newKit(kit)
             sync = Application.readSetting(MENU_ENTRY, f"{index}sync", "").split(";")
-            if len(sync) ==  2:
+            if len(sync) == 2:
                 ids = [int(id) for id in sync[0].split(",") if id.isdecimal()]
                 states = [int(state) for state in sync[1].split(",") if state == "0" or state == "1"]
                 if len(ids) == len(states):
                     self.sync.changeSettings(kit, ids, states)
 
         options = Application.readSetting(MENU_ENTRY, "options", "").split(",")
-        if len(options) >= 5:
+        if len(options) == 5:
             self.activatePrev = options[0] == "True"
             self.activateNext = options[1] == "True"
             self.nextGroup = options[2] == "True"
