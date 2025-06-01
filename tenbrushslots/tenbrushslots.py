@@ -227,9 +227,13 @@ class TenBrushSlots(Extension):
             self.loadTool()
             self.waitToRemove.start(10)
 
-    def loadTool(self):    
-        toolBox = Application.activeWindow().qwindow().findChild(QDockWidget, 'ToolBox')
+    def loadTool(self):
+        qwin = Application.activeWindow().qwindow()
+        toolBox = qwin.findChild(QDockWidget, 'ToolBox')
         self.brushTool = toolBox.findChild(QToolButton, 'KritaShape/KisToolBrush')
+        if self.brushTool is None:
+            # For Krita UI Redesign Plugin
+            self.brushTool = qwin.findChild(QToolButton, 'KritaShape/KisToolBrush')
 
     def createActions(self, window):
         action = window.createAction(EXTENSION_ID, MENU_ENTRY, "tools/scripts")
